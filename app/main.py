@@ -4,6 +4,7 @@ import asyncio
 import structlog
 from app.config import settings  # noqa: F401 — validates env vars on startup
 from app.monitor import UBRClient
+from app.detector import EventDetector
 
 structlog.configure(
     processors=[
@@ -19,10 +20,11 @@ logger = structlog.get_logger()
 
 async def run():
     client = UBRClient()
+    detector = EventDetector()
     try:
         await client.login()
         html = await client.fetch_events()
-        print(html)
+        await detector.detect_events(html)
     finally:
         await client.close()
 
