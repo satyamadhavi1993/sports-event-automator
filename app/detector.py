@@ -1,11 +1,7 @@
-"""Uses the Anthropic API to detect significant match events."""
+"""Parses event page text to find NWBA events."""
 
-import anthropic
 import structlog
-from anthropic import APIConnectionError, APIStatusError, RateLimitError
-from pydantic import BaseModel, ValidationError
-
-from app.config import settings
+from pydantic import BaseModel
 
 logger = structlog.get_logger()
 
@@ -24,81 +20,66 @@ class EventDetectionResult(BaseModel):
     summary: str
 
 
-class EventDetector:
-    def __init__(self):
-        self._client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+TARGETS = [
+    {"day": "Wednesday", "location": "NWBA - Kirkland"},
+    {"day": "Thursday",  "location": "NWBA - Bel-Red"},
+]
 
-    async def detect_events(self, text: str) -> EventDetectionResult:
+
+class EventDetector:
+    def detect_events(self, text: str) -> EventDetectionResult:
         if not text.strip():
             raise ValueError("Empty page content provided")
 
-        # guard: if content is too short, the page is probably a login redirect
         if len(text) < 200:
             raise ValueError(
                 f"Page content too short ({len(text)} chars) — "
                 "session may have expired or page failed to load"
             )
 
-        logger.info("detecting events", content_chars=len(text))
+        logger.info("parsing events", content_chars=len(text))
 
-        user_message = (
-            "Analyze this sports event page and find specific events "
-            "from organizer 'Northwest Badminton Academy' in the Seattle region.\n\n"
-            "I am looking for exactly these two events:\n"
-            "1. Wednesday event at location 'NWBA - Kirkland'\n"
-            "2. Thursday event at location 'NWBA - Bel-Red'\n\n"
-            "For each event found, check if it is open for registration.\n\n"
-            "Return ONLY a JSON response with this structure:\n"
-            "{\n"
-            "  'events_found': true/false,\n"
-            "  'events': [\n"
-            "    {\n"
-            "      'day': 'Wednesday or Thursday',\n"
-            "      'location': 'exact location from page',\n"
-            "      'organizer': 'organizer name',\n"
-            "      'is_open': true/false,\n"
-            "      'details': 'any other relevant details'\n"
-            "    }\n"
-            "  ],\n"
-            "  'summary': 'one line human readable summary'\n"
-            "}\n\n"
-            "If neither event is found return events_found as false "
-            "and empty events list.\n\n"
-            f"{text}"
-        )
+        lines = [line.strip() for line in text.splitlines() if line.strip()]
+        events = []
 
-        try:
-            response = await self._client.messages.parse(
-                model="claude-opus-4-7",
-                max_tokens=2048,
-                system=(
-                    "You analyze sports event pages. When asked about events, "
-                    "respond only with the requested JSON structure."
-                ),
-                messages=[{"role": "user", "content": user_message}],
-                output_format=EventDetectionResult,
+        for target in TARGETS:
+            location = target["location"]
+
+            for i, line in enumerate(lines):
+                if location not in line:
+                    continue
+
+                # Grab a window of lines around the location match for context
+                window = lines[max(0, i - 5) : i + 10]
+                window_text = "\n".join(window).lower()
+
+                # Open = "register" link present; check-in alone means already registered
+                is_open = "register" in window_text
+
+                details = " | ".join(window[:8])
+
+                events.append(Event(
+                    day=target["day"],
+                    location=location,
+                    organizer="Northwest Badminton Academy",
+                    is_open=is_open,
+                    details=details,
+                ))
+                break  # stop after first match for this location
+
+        events_found = len(events) > 0
+        if events_found:
+            summary = ", ".join(
+                f"{e.day} at {e.location} ({'open' if e.is_open else 'closed'})"
+                for e in events
             )
-        except RateLimitError:
-            logger.error("anthropic rate limit hit — too many requests")
-            raise
-        except APIConnectionError as e:
-            logger.error("could not reach anthropic api", error=str(e))
-            raise
-        except APIStatusError as e:
-            logger.error("anthropic api error", status_code=e.status_code, error=str(e))
-            raise
-        except ValidationError as e:
-            logger.error("claude response did not match expected schema", error=str(e))
-            raise
+        else:
+            summary = "No NWBA Kirkland or Bel-Red events found for next week"
 
-        if response.parsed_output is None:
-            raise RuntimeError("Claude returned no structured output — possible refusal")
-
-        result = response.parsed_output
-        logger.info(
-            "events detected",
-            events_found=result.events_found,
-            count=len(result.events),
-            summary=result.summary,
+        result = EventDetectionResult(
+            events_found=events_found,
+            events=events,
+            summary=summary,
         )
+        logger.info("events parsed", events_found=events_found, count=len(events), summary=summary)
         return result

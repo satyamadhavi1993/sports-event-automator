@@ -12,9 +12,6 @@ class Settings(BaseSettings):
     ubr_email: str
     ubr_password: str
 
-    # Anthropic
-    anthropic_api_key: str
-
     # Twilio SMS
     twilio_account_sid: str
     twilio_auth_token: str

@@ -25,18 +25,25 @@ async def run():
     notifier = Notifier()
     try:
         await client.login()
-        html = await client.fetch_events()
-        result = await detector.detect_events(html)
+        text = await client.fetch_events()
+        result = detector.detect_events(text)
+        open_events = [e for e in result.events if e.is_open]
 
-        if result.events_found:
-            content = await notifier.compose_notification(result)
+        if open_events:
+            content = notifier.compose_notification(result)
             await asyncio.gather(
                 notifier.send_sms(content.sms),
                 notifier.send_email(content.email_subject, content.email_body),
             )
             logger.info("notifications sent", sms=content.sms, subject=content.email_subject)
+
+            # Phase 5 - Auto registration
+            # TODO: Call registrar.register_for_events() here
+            # TODO: Call registrar.verify_registration() here
+            # TODO: Send success/failure notification
+            # Will be implemented and tested next Sunday
         else:
-            logger.info("no open events found — no notifications sent")
+            logger.info("no open events found — no notifications sent", summary=result.summary)
     finally:
         await client.close()
 

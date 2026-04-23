@@ -2,7 +2,6 @@
 
 import asyncio
 
-import anthropic
 import structlog
 from pydantic import BaseModel
 from sendgrid import SendGridAPIClient
@@ -17,56 +16,46 @@ logger = structlog.get_logger()
 
 
 class NotificationContent(BaseModel):
-    sms: str           # max 160 chars, plain text
+    sms: str
     email_subject: str
-    email_body: str    # HTML
+    email_body: str
 
 
 class Notifier:
     def __init__(self):
         self._twilio = Client(settings.twilio_account_sid, settings.twilio_auth_token)
         self._sendgrid = SendGridAPIClient(settings.sendgrid_api_key)
-        self._anthropic = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
 
-    async def compose_notification(self, result: EventDetectionResult) -> NotificationContent:
-        event_details = "\n".join(
-            f"- {e.day} at {e.location} (organizer: {e.organizer}, "
-            f"open: {e.is_open}, details: {e.details})"
+    def compose_notification(self, result: EventDetectionResult) -> NotificationContent:
+        open_events = [e for e in result.events if e.is_open]
+
+        parts = [
+            f"{e.day[:3]} @ {e.location.replace('NWBA - ', '')}"
+            for e in open_events
+        ]
+        sms = f"🏸 NWBA events open! {', '.join(parts)}. Register now!"
+
+        rows = "".join(
+            f"<tr><td><b>{e.day}</b></td><td>{e.location}</td>"
+            f"<td>{'✅ Open' if e.is_open else '❌ Closed'}</td>"
+            f"<td>{e.details}</td></tr>"
             for e in result.events
         )
-
-        response = await self._anthropic.messages.parse(
-            model="claude-opus-4-7",
-            max_tokens=1024,
-            system=(
-                "You write short, friendly sports notification messages. "
-                "Respond only with the requested JSON structure."
-            ),
-            messages=[{
-                "role": "user",
-                "content": (
-                    "Write a notification for these badminton events that are now open "
-                    "for registration:\n\n"
-                    f"{event_details}\n\n"
-                    "Rules:\n"
-                    "- sms: plain text, max 160 chars, include 🏸 emoji, friendly and urgent\n"
-                    "- email_subject: short and clear, mention NWBA and that spots are open\n"
-                    "- email_body: HTML, include all event details (day, location, open status), "
-                    "end with a strong reminder to register immediately"
-                ),
-            }],
-            output_format=NotificationContent,
+        email_body = (
+            "<h2>🏸 NWBA Events Open for Registration</h2>"
+            "<table border='1' cellpadding='8' cellspacing='0'>"
+            "<tr><th>Day</th><th>Location</th><th>Status</th><th>Details</th></tr>"
+            f"{rows}"
+            "</table>"
+            "<br><p><strong>Register immediately before spots fill up!</strong></p>"
         )
 
-        if response.parsed_output is None:
-            raise RuntimeError("Claude returned no structured output for notification")
-
-        content = response.parsed_output
-        logger.info(
-            "notification composed",
-            sms_chars=len(content.sms),
-            subject=content.email_subject,
+        content = NotificationContent(
+            sms=sms,
+            email_subject="NWBA Events Open for Registration",
+            email_body=email_body,
         )
+        logger.info("notification composed", sms_chars=len(content.sms), subject=content.email_subject)
         return content
 
     async def send_sms(self, message: str) -> None:
