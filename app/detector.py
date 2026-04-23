@@ -3,7 +3,6 @@
 import anthropic
 import structlog
 from anthropic import APIConnectionError, APIStatusError, RateLimitError
-from bs4 import BeautifulSoup
 from pydantic import BaseModel, ValidationError
 
 from app.config import settings
@@ -29,25 +28,18 @@ class EventDetector:
     def __init__(self):
         self._client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
 
-    def _clean_html(self, html: str) -> str:
-        soup = BeautifulSoup(html, "html.parser")
-        for tag in soup(["script", "style", "meta", "link", "noscript"]):
-            tag.decompose()
-        return soup.get_text(separator="\n", strip=True)
+    async def detect_events(self, text: str) -> EventDetectionResult:
+        if not text.strip():
+            raise ValueError("Empty page content provided")
 
-    async def detect_events(self, html: str) -> EventDetectionResult:
-        if not html.strip():
-            raise ValueError("Empty HTML content provided")
-
-        cleaned_text = self._clean_html(html)
-        logger.info("html cleaned", original_bytes=len(html), cleaned_chars=len(cleaned_text))
-
-        # guard: if cleaning left almost nothing, the page is probably a login redirect
-        if len(cleaned_text) < 200:
+        # guard: if content is too short, the page is probably a login redirect
+        if len(text) < 200:
             raise ValueError(
-                f"Cleaned page content too short ({len(cleaned_text)} chars) — "
+                f"Page content too short ({len(text)} chars) — "
                 "session may have expired or page failed to load"
             )
+
+        logger.info("detecting events", content_chars=len(text))
 
         user_message = (
             "Analyze this sports event page and find specific events "
@@ -72,7 +64,7 @@ class EventDetector:
             "}\n\n"
             "If neither event is found return events_found as false "
             "and empty events list.\n\n"
-            f"{cleaned_text}"
+            f"{text}"
         )
 
         try:
