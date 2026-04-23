@@ -1,0 +1,59 @@
+name: Event Monitor
+
+on:
+  schedule:
+    - cron: '0 1,2,3,4,5 * * 1'              # Sun 6PM-10PM PDT  → Mon 01:00-05:00 UTC
+    - cron: '0 16,17,18,19,20,21,22,23 * * 1' # Mon 9AM-8PM PDT   → Mon 16:00-23:00 UTC
+    - cron: '0 0,1,2,3 * * 2'                 # Mon 8PM+ PDT      → Tue 00:00-03:00 UTC
+  workflow_dispatch:
+
+jobs:
+  monitor-events:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      UBR_BASE_URL: ${{ secrets.UBR_BASE_URL }}
+      UBR_EMAIL: ${{ secrets.UBR_EMAIL }}
+      UBR_PASSWORD: ${{ secrets.UBR_PASSWORD }}
+      TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
+      TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+      TWILIO_FROM_NUMBER: ${{ secrets.TWILIO_FROM_NUMBER }}
+      TWILIO_TO_NUMBER: ${{ secrets.TWILIO_TO_NUMBER }}
+      SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
+      SENDGRID_FROM_EMAIL: ${{ secrets.SENDGRID_FROM_EMAIL }}
+      SENDGRID_TO_EMAIL: ${{ secrets.SENDGRID_TO_EMAIL }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ hashFiles('requirements.txt') }}
+
+      - name: Install Playwright chromium
+        run: |
+          playwright install chromium
+          playwright install-deps chromium
+
+      - name: Run event monitor
+        run: python -m app.main
+
+      - name: Report failure
+        if: failure()
+        run: |
+          echo "❌ Event monitor failed — check logs above for details"
+          echo "Common causes: UBR login failed, network error, or missing secrets"
