@@ -3,6 +3,8 @@
 import structlog
 from pydantic import BaseModel
 
+from app.events import ORGANIZER, TARGETS
+
 logger = structlog.get_logger()
 
 
@@ -18,12 +20,6 @@ class EventDetectionResult(BaseModel):
     events_found: bool
     events: list[Event]
     summary: str
-
-
-TARGETS = [
-    {"day": "Wednesday", "location": "NWBA - Kirkland"},
-    {"day": "Thursday",  "location": "NWBA - Bel-Red"},
-]
 
 
 class EventDetector:
@@ -61,7 +57,7 @@ class EventDetector:
                 events.append(Event(
                     day=target["day"],
                     location=location,
-                    organizer="Northwest Badminton Academy",
+                    organizer=ORGANIZER,
                     is_open=is_open,
                     details=details,
                 ))

@@ -2,20 +2,12 @@
 
 import asyncio
 import structlog
-from app.config import settings  # noqa: F401 — validates env vars on startup
+from app.config import configure_logging, settings  # noqa: F401 — settings import validates env vars on startup
 from app.monitor import UBRClient
 from app.detector import EventDetector
 from app.notifier import Notifier
 
-structlog.configure(
-    processors=[
-        structlog.stdlib.add_log_level,
-        structlog.processors.TimeStamper(fmt="iso"),
-        structlog.dev.ConsoleRenderer(),
-    ],
-    wrapper_class=structlog.make_filtering_bound_logger(20),
-)
-
+configure_logging()
 logger = structlog.get_logger()
 
 

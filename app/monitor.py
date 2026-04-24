@@ -4,11 +4,9 @@ import structlog
 from playwright.async_api import async_playwright
 
 from app.config import settings
+from app.events import EVENTS_PARAMS, EVENTS_PATH, LOGIN_PATH
 
 logger = structlog.get_logger()
-
-LOGIN_PATH = "/users/sign_in"
-EVENTS_PATH = "/badminton_events"
 
 
 class UBRClient:
@@ -16,6 +14,10 @@ class UBRClient:
         self._playwright = None
         self._browser = None
         self._page = None
+
+    @property
+    def page(self):
+        return self._page
 
     async def login(self) -> None:
         self._playwright = await async_playwright().start()
@@ -31,11 +33,7 @@ class UBRClient:
         logger.info("login successful", url=self._page.url)
 
     async def fetch_events(self) -> str:
-        url = (
-            settings.ubr_base_url
-            + EVENTS_PATH
-            + "?rp=nextweek&region=seattle"
-        )
+        url = settings.ubr_base_url + EVENTS_PATH + EVENTS_PARAMS
         await self._page.goto(url, wait_until="networkidle")
 
         text = await self._page.inner_text("body")

@@ -11,6 +11,7 @@ from twilio.rest import Client
 
 from app.config import settings
 from app.detector import EventDetectionResult
+from app.events import LOCATION_PREFIX
 
 logger = structlog.get_logger()
 
@@ -30,7 +31,7 @@ class Notifier:
         open_events = [e for e in result.events if e.is_open]
 
         parts = [
-            f"{e.day[:3]} @ {e.location.replace('NWBA - ', '')}"
+            f"{e.day[:3]} @ {e.location.replace(LOCATION_PREFIX, '')}"
             for e in open_events
         ]
         sms = f"🏸 NWBA events open! {', '.join(parts)}. Register now!"

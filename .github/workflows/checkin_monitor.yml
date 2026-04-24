@@ -1,0 +1,56 @@
+name: Check-in Monitor
+
+on:
+  schedule:
+    - cron: '*/10 2,3,4,5 * * 4,5'  # Wed/Thu 7PM-10PM PDT → Thu/Fri 02:00-05:00 UTC
+  workflow_dispatch:
+
+jobs:
+  monitor-checkin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    env:
+      UBR_BASE_URL: ${{ secrets.UBR_BASE_URL }}
+      UBR_EMAIL: ${{ secrets.UBR_EMAIL }}
+      UBR_PASSWORD: ${{ secrets.UBR_PASSWORD }}
+      TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
+      TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+      TWILIO_FROM_NUMBER: ${{ secrets.TWILIO_FROM_NUMBER }}
+      TWILIO_TO_NUMBER: ${{ secrets.TWILIO_TO_NUMBER }}
+      SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
+      SENDGRID_FROM_EMAIL: ${{ secrets.SENDGRID_FROM_EMAIL }}
+      SENDGRID_TO_EMAIL: ${{ secrets.SENDGRID_TO_EMAIL }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ hashFiles('requirements.txt') }}
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install Playwright chromium
+        run: |
+          playwright install chromium
+          playwright install-deps chromium
+
+      - name: Run check-in monitor
+        run: python -m app.check_in
+
+      - name: Report failure
+        if: failure()
+        run: |
+          echo "❌ Check-in monitor failed — check logs above for details"
+          echo "Common causes: UBR login failed, selector changed, or missing secrets"
