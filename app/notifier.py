@@ -11,7 +11,6 @@ from twilio.rest import Client
 
 from app.config import settings
 from app.detector import EventDetectionResult
-from app.events import LOCATION_PREFIX
 
 logger = structlog.get_logger()
 
@@ -31,10 +30,10 @@ class Notifier:
         open_events = [e for e in result.events if e.is_open]
 
         parts = [
-            f"{e.day[:3]} @ {e.location.replace(LOCATION_PREFIX, '')}"
+            f"{e.day[:3]} @ {e.location}"
             for e in open_events
         ]
-        sms = f"🏸 NWBA events open! {', '.join(parts)}. Register now!"
+        sms = f"🏸 {settings.event_organiser_name} events open! {', '.join(parts)}. Register now!"
 
         rows = "".join(
             f"<tr><td><b>{e.day}</b></td><td>{e.location}</td>"
@@ -43,7 +42,7 @@ class Notifier:
             for e in result.events
         )
         email_body = (
-            "<h2>🏸 NWBA Events Open for Registration</h2>"
+            f"<h2>🏸 {settings.event_organiser_name} Events Open for Registration</h2>"
             "<table border='1' cellpadding='8' cellspacing='0'>"
             "<tr><th>Day</th><th>Location</th><th>Status</th><th>Details</th></tr>"
             f"{rows}"
@@ -53,7 +52,7 @@ class Notifier:
 
         content = NotificationContent(
             sms=sms,
-            email_subject="NWBA Events Open for Registration",
+            email_subject=f"{settings.event_organiser_name} Events Open for Registration",
             email_body=email_body,
         )
         logger.info("notification composed", sms_chars=len(content.sms), subject=content.email_subject)

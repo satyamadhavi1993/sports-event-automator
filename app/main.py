@@ -3,7 +3,7 @@
 import asyncio
 import structlog
 from app.config import configure_logging, settings  # noqa: F401 — settings import validates env vars on startup
-from app.monitor import UBRClient
+from app.monitor import PlatformClient
 from app.detector import EventDetector
 from app.notifier import Notifier
 
@@ -12,7 +12,7 @@ logger = structlog.get_logger()
 
 
 async def run():
-    client = UBRClient()
+    client = PlatformClient()
     detector = EventDetector()
     notifier = Notifier()
     try:

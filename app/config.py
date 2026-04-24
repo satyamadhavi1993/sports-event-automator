@@ -1,34 +1,34 @@
 """Application configuration loaded from environment variables."""
 
 import structlog
-from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
-    # UBR
-    ubr_base_url: str
-    ubr_email: str
-    ubr_password: str
+    # Platform credentials
+    platform_url: str
+    platform_login_url: str
+    platform_events_url: str
+    platform_email: str
+    platform_password: str
 
-    # Twilio SMS
+    # Event configuration
+    event_organiser_name: str
+    event_location_wed: str
+    event_location_thu: str
+
+    # Twilio
     twilio_account_sid: str
     twilio_auth_token: str
     twilio_from_number: str
     twilio_to_number: str
 
-    # SendGrid email
+    # SendGrid
     sendgrid_api_key: str
     sendgrid_from_email: str
     sendgrid_to_email: str
-
-    # Redis
-    redis_url: str = Field(default="redis://localhost:6379")
-
-    # Sentry (optional — omit to disable)
-    sentry_dsn: str | None = Field(default=None)
 
 
 settings = Settings()

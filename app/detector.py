@@ -1,4 +1,4 @@
-"""Parses event page text to find NWBA events."""
+"""Parses event page text to find configured events."""
 
 import structlog
 from pydantic import BaseModel
@@ -70,7 +70,7 @@ class EventDetector:
                 for e in events
             )
         else:
-            summary = "No NWBA Kirkland or Bel-Red events found for next week"
+            summary = f"No {ORGANIZER} events found for next week"
 
         result = EventDetectionResult(
             events_found=events_found,

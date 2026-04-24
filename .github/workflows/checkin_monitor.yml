@@ -12,9 +12,14 @@ jobs:
 
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-      UBR_BASE_URL: ${{ secrets.UBR_BASE_URL }}
-      UBR_EMAIL: ${{ secrets.UBR_EMAIL }}
-      UBR_PASSWORD: ${{ secrets.UBR_PASSWORD }}
+      PLATFORM_URL: ${{ secrets.PLATFORM_URL }}
+      PLATFORM_LOGIN_URL: ${{ secrets.PLATFORM_LOGIN_URL }}
+      PLATFORM_EVENTS_URL: ${{ secrets.PLATFORM_EVENTS_URL }}
+      PLATFORM_EMAIL: ${{ secrets.PLATFORM_EMAIL }}
+      PLATFORM_PASSWORD: ${{ secrets.PLATFORM_PASSWORD }}
+      EVENT_ORGANISER_NAME: ${{ secrets.EVENT_ORGANISER_NAME }}
+      EVENT_LOCATION_WED: ${{ secrets.EVENT_LOCATION_WED }}
+      EVENT_LOCATION_THU: ${{ secrets.EVENT_LOCATION_THU }}
       TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
       TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
       TWILIO_FROM_NUMBER: ${{ secrets.TWILIO_FROM_NUMBER }}
@@ -54,4 +59,4 @@ jobs:
         if: failure()
         run: |
           echo "❌ Check-in monitor failed — check logs above for details"
-          echo "Common causes: UBR login failed, selector changed, or missing secrets"
+          echo "Common causes: login failed, selector changed, or missing secrets"

@@ -4,12 +4,11 @@ import structlog
 from playwright.async_api import async_playwright
 
 from app.config import settings
-from app.events import EVENTS_PARAMS, EVENTS_PATH, LOGIN_PATH
 
 logger = structlog.get_logger()
 
 
-class UBRClient:
+class PlatformClient:
     def __init__(self):
         self._playwright = None
         self._browser = None
@@ -24,17 +23,19 @@ class UBRClient:
         self._browser = await self._playwright.chromium.launch(headless=True)
         self._page = await self._browser.new_page()
 
-        await self._page.goto(settings.ubr_base_url + LOGIN_PATH)
-        await self._page.fill('input[name="user[email]"]', settings.ubr_email)
-        await self._page.fill('input[name="user[password]"]', settings.ubr_password)
+        await self._page.goto(settings.platform_login_url)
+        await self._page.fill('input[name="user[email]"]', settings.platform_email)
+        await self._page.fill('input[name="user[password]"]', settings.platform_password)
         await self._page.click('input[type="submit"]')
-        await self._page.wait_for_url("**/users/**")
+
+        await self._page.wait_for_load_state("networkidle")
+        if self._page.url == settings.platform_login_url:
+            raise RuntimeError("Login failed — still on login page after POST")
 
         logger.info("login successful", url=self._page.url)
 
     async def fetch_events(self) -> str:
-        url = settings.ubr_base_url + EVENTS_PATH + EVENTS_PARAMS
-        await self._page.goto(url, wait_until="networkidle")
+        await self._page.goto(settings.platform_events_url, wait_until="networkidle")
 
         text = await self._page.inner_text("body")
         logger.info("events page fetched", url=self._page.url, chars=len(text))

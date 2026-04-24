@@ -1,19 +1,15 @@
-"""Domain constants — event locations, URL paths, and query params."""
+"""Domain constants derived from configuration."""
 
-ORGANIZER = "Northwest Badminton Academy"
-LOCATION_PREFIX = "NWBA - "
+from app.config import settings
+
+ORGANIZER = settings.event_organiser_name
 
 DAY_TO_LOCATION = {
-    "Wednesday": "NWBA - Kirkland",
-    "Thursday":  "NWBA - Bel-Red",
+    "Wednesday": settings.event_location_wed,
+    "Thursday":  settings.event_location_thu,
 }
 
 TARGETS = [
     {"day": day, "location": location}
     for day, location in DAY_TO_LOCATION.items()
 ]
-
-LOGIN_PATH    = "/users/sign_in"
-EVENTS_PATH   = "/badminton_events"
-
-EVENTS_PARAMS = "?rp=nextweek&region=seattle"

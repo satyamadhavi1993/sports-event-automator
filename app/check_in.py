@@ -1,4 +1,4 @@
-"""Detects and performs event check-in on the UBR website."""
+"""Detects and performs event check-in on the platform."""
 
 import asyncio
 from datetime import datetime
@@ -7,8 +7,8 @@ from zoneinfo import ZoneInfo
 import structlog
 
 from app.config import configure_logging, settings
-from app.events import DAY_TO_LOCATION, EVENTS_PARAMS, EVENTS_PATH, LOCATION_PREFIX
-from app.monitor import UBRClient
+from app.events import DAY_TO_LOCATION
+from app.monitor import PlatformClient
 from app.notifier import Notifier
 
 configure_logging()
@@ -18,7 +18,7 @@ PACIFIC = ZoneInfo("America/Los_Angeles")
 
 
 class CheckInMonitor:
-    def __init__(self, client: UBRClient):
+    def __init__(self, client: PlatformClient):
         self._client = client
         self._notifier = Notifier()
 
@@ -33,11 +33,8 @@ class CheckInMonitor:
         logger.info("check-in day detected", day=day_name, location=location)
 
         page = self._client.page
-        url = settings.ubr_base_url + EVENTS_PATH + EVENTS_PARAMS
-        await page.goto(url, wait_until="networkidle")
+        await page.goto(settings.platform_events_url, wait_until="networkidle")
 
-        # Find the event section containing our target location,
-        # then look for a Check In link within it
         event_section = page.locator("tr, li, div").filter(has_text=location)
         checkin_button = event_section.get_by_text("Check In").first
 
@@ -59,7 +56,6 @@ class CheckInMonitor:
 
         await page.wait_for_load_state("networkidle")
 
-        # Verify success — after check-in, "Withdraw" should appear on the page
         page_text = await page.inner_text("body")
         if "withdraw" not in page_text.lower():
             raise RuntimeError(
@@ -69,7 +65,7 @@ class CheckInMonitor:
 
         logger.info("check-in successful", location=location, day=day_name)
 
-        sms = f"✅ Checked in for tonight's NWBA event at {location.replace(LOCATION_PREFIX, '')}!"
+        sms = f"✅ Checked in for tonight's event at {location}!"
         email_body = (
             "<h2>✅ Check-in Confirmed</h2>"
             "<p>You are checked in for tonight's event:</p>"
@@ -87,7 +83,7 @@ class CheckInMonitor:
 
 
 async def _run():
-    client = UBRClient()
+    client = PlatformClient()
     monitor = CheckInMonitor(client)
     try:
         await client.login()
