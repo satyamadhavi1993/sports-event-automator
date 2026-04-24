@@ -38,6 +38,10 @@ class CheckInMonitor:
         event_section = page.locator("tr, li, div").filter(has_text=location)
         checkin_button = event_section.get_by_text("Check In").first
 
+        if await checkin_button.count() == 0:
+            logger.info("check-in button not present — already checked in or event not listed", location=location)
+            return
+
         if not await checkin_button.is_enabled():
             logger.info("check-in not yet enabled — will retry", location=location)
             return
