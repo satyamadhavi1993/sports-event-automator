@@ -11,6 +11,7 @@ jobs:
     timeout-minutes: 5
 
     env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
       UBR_BASE_URL: ${{ secrets.UBR_BASE_URL }}
       UBR_EMAIL: ${{ secrets.UBR_EMAIL }}
       UBR_PASSWORD: ${{ secrets.UBR_PASSWORD }}
