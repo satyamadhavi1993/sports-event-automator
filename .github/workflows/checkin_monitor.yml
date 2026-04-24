@@ -2,8 +2,7 @@ name: Check-in Monitor
 
 on:
   schedule:
-    # - cron: '*/10 2,3,4,5 * * 4,5'  # Wed/Thu 7PM-10PM PDT → Thu/Fri 02:00-05:00 UTC
-    - cron: '*/10 2,3,4,5 * * 4,5'  # Thu/Fri 02:00-05:00 UTC - every 10 mins
+    - cron: '*/10 2,3 * * 4,5'  # Thu/Fri 02:00-05:00 UTC - every 10 mins
   workflow_dispatch:
 
 jobs:
