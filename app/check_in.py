@@ -57,7 +57,7 @@ class CheckInMonitor:
         await page.wait_for_load_state("networkidle")
 
         page_text = await page.inner_text("body")
-        if "withdraw" not in page_text.lower():
+        if "checked in" not in page_text.lower():
             raise RuntimeError(
                 f"Check-in clicked but success not confirmed for {location}. "
                 f"Page snippet: {page_text[:300]}"

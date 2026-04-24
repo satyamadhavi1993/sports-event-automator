@@ -7,7 +7,6 @@ from app.config import settings
 
 logger = structlog.get_logger()
 
-
 class PlatformClient:
     def __init__(self):
         self._playwright = None
@@ -26,11 +25,14 @@ class PlatformClient:
         await self._page.goto(settings.platform_login_url)
         await self._page.fill('input[name="user[email]"]', settings.platform_email)
         await self._page.fill('input[name="user[password]"]', settings.platform_password)
-        await self._page.click('input[type="submit"]')
+        async with self._page.expect_navigation(wait_until="networkidle"):
+            await self._page.click('input[type="submit"]')
 
-        await self._page.wait_for_load_state("networkidle")
         if self._page.url == settings.platform_login_url:
-            raise RuntimeError("Login failed — still on login page after POST")
+            raise RuntimeError(
+                f"Login failed — still on login page after submit. "
+                f"Check credentials or form selectors. Current URL: {self._page.url}"
+            )
 
         logger.info("login successful", url=self._page.url)
 
