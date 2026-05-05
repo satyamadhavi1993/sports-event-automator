@@ -49,8 +49,7 @@ class EventDetector:
                 window = lines[max(0, i - 5) : i + 10]
                 window_text = "\n".join(window).lower()
 
-                # Open = "register" link present; check-in alone means already registered
-                is_open = "register" in window_text
+                is_open = "sign up" in window_text
 
                 details = " | ".join(window[:8])
 
