@@ -33,7 +33,7 @@ class Notifier:
             f"{e.day[:3]} @ {e.location}"
             for e in open_events
         ]
-        sms = f"🏸 {settings.event_organiser_name} events open! {', '.join(parts)}. Register now!"
+        sms = f"🏸 {settings.event_organiser_name} events open! {', '.join(parts)}. Register now: {settings.platform_events_url}"
 
         rows = "".join(
             f"<tr><td><b>{e.day}</b></td><td>{e.location}</td>"
